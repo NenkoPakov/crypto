@@ -25,7 +25,6 @@ obj/
 *.tli
 *.pdb
 *.idb
-*.json
 
 # Package files
 *.nupkg
