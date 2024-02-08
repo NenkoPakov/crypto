@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import {API_URL, UPLOAD_ENDPOINT} from '../config';
 import axios from "axios";
 import "../App.css";
 
@@ -18,7 +19,7 @@ export const FileUpload = ({ handleAssetsFunc, handleInitialBalanceFunc, handleC
     formData.append("fileName", fileName);
 
     try {
-      const res = await axios.post("http://localhost:5000/portfolio/upload", formData);
+      const res = await axios.post(`${API_URL}${UPLOAD_ENDPOINT}`, formData);
 
       handleAssetsFunc(res.data.assets);
       handleInitialBalanceFunc(res.data.initialBalance);

@@ -4,13 +4,14 @@ import axios from "axios";
 import { Table } from './Components/Table';
 import { StatisticsBar } from './Components/StatisticsBar';
 import { RefreshButton } from './Components/RefreshButton';
+import {API_URL, REFRESH_ENDPOINT, REFRESH_INTERVAL_IN_MINUTES} from './config';
 
 function App() {
   const [assets, setAssets] = useState({});
   const [initialBalance, setInitialBalance] = useState(0);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [sort, setSort] = useState({});
-  const [intervalValueInMinutes, setIntervalValueInMinutes] = useState(5);
+  const [intervalValueInMinutes, setIntervalValueInMinutes] = useState(REFRESH_INTERVAL_IN_MINUTES);
 
   useEffect(() => {
     if (currentBalance > 0) {
@@ -47,7 +48,7 @@ function App() {
 
   const handleRefresh = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/crypto-currency/refresh/?tickersIds=${Object.keys(assets)}`, {
+      const res = await axios.get(`${API_URL}${REFRESH_ENDPOINT}${Object.keys(assets)}`, {
         headers: {
           'Accept': 'application/json',
         },
@@ -67,22 +68,27 @@ function App() {
 
       setAssets(prevAssets => {
         const updatedAssets = { ...prevAssets };
-
+        
         for (const key of Object.keys(data)) {
           updatedAssets[key].currentCoinPrice = data[key];
+          console.log(updatedAssets[key].amount * data[key]);
           currentTotalPrice += updatedAssets[key].amount * data[key];
         }
-
+        
         return updatedAssets;
       });
-
-      setCurrentBalance(() => currentTotalPrice)
+      
     } catch (ex) {
       console.log(ex);
     } finally {
       setTimeout(handleRefresh, intervalValueInMinutes * 60 * 1000);
     }
   };
+
+  useEffect(()=>{
+    var currentTotalBalance = Object.values(assets).reduce((accumulator, currentAsset) => accumulator + currentAsset.currentCoinPrice*currentAsset.amount, 0);
+    setCurrentBalance(() => currentTotalBalance)
+  },[assets])
 
   return (
     <div style={{ position: 'fixed', width: '80vw', height: '90vh' }} className="App">
