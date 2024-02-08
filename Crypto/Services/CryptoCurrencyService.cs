@@ -24,22 +24,34 @@ namespace Crypto.Services
         {
             var response = await _httpClient.GetAsync(BuildRefreshUrl(tickersIds));
 
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var content = await response.Content.ReadAsStringAsync();
-                var currentTickersPrice = JsonConvert.DeserializeObject<IEnumerable<CurrentTickerPrice>>(content);
-
-                return new CurrentTickerPriceDTO()
+                if (response.IsSuccessStatusCode)
                 {
-                    CurrentTickerStatus = currentTickersPrice?.ToDictionary(ctp => ctp.Id, ctp => ctp.CurrentCoinPrice)
-                };
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine(content);
+                    var currentTickersPrice = JsonConvert.DeserializeObject<IEnumerable<CurrentTickerPrice>>(content);
+                    Console.WriteLine("------------------------");
+                    Console.WriteLine(JsonConvert.SerializeObject(currentTickersPrice));
+
+                    return new CurrentTickerPriceDTO()
+                    {
+                        CurrentTickerStatus = currentTickersPrice?.ToDictionary(ctp => ctp.Id, ctp => ctp.CurrentCoinPrice)
+                    };
+                }
+                else
+                {
+                    var errorMessage = "An error has occured while fetching tickers data";
+                    _logger.LogError(errorMessage);
+                }
             }
-            else
+            catch (Exception)
             {
                 var errorMessage = "An error has occured while deserializing tickers data";
                 _logger.LogError(errorMessage);
-                throw new Exception(errorMessage);
             }
+
+            return new CurrentTickerPriceDTO();
         }
 
         public async ValueTask<Dictionary<string, TickerDetails>> FilterTickersData(IEnumerable<string> tickers)
