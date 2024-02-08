@@ -10,11 +10,6 @@ internal class Program
 
         builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
 
-        var log = new LoggerConfiguration()
-                    .WriteTo.File("logs/log.txt",
-                    rollingInterval: RollingInterval.Day,
-                    rollOnFileSizeLimit: true)
-                    .CreateLogger();
         ConfigureServices(builder.Services);
 
         var app = builder.Build();

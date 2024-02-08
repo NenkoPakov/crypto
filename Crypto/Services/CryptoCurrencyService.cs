@@ -1,6 +1,7 @@
 ﻿using Crypto.Models.CryptoCurrentcy;
 using Crypto.Models.DTOs;
 using Crypto.Services.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -10,16 +11,18 @@ namespace Crypto.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<CryptoCurrencyService> _logger;
+        private readonly IConfiguration _configuration;
 
-        public CryptoCurrencyService(IHttpClientFactory httpClientFactory, ILogger<CryptoCurrencyService> logger)
+        public CryptoCurrencyService(IHttpClientFactory httpClientFactory, ILogger<CryptoCurrencyService> logger, IConfiguration configuration)
         {
             _httpClient = httpClientFactory.CreateClient();
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<CurrentTickerPriceDTO> GetTickersData(string tickersIds)
         {
-            var response = await _httpClient.GetAsync(BuildUrl(tickersIds));
+            var response = await _httpClient.GetAsync(BuildRefreshUrl(tickersIds));
 
             if (response.IsSuccessStatusCode)
             {
@@ -50,22 +53,23 @@ namespace Crypto.Services
                 .ToDictionary(tickerDetail => tickerDetail.Symbol, tickerDetail => tickerDetail);
         }
 
-        private string BuildUrl(string tickersIds)
+        private string BuildRefreshUrl(string tickersIds)
         {
             var ids = tickersIds
                             .Split(',', StringSplitOptions.RemoveEmptyEntries)
                             .Select(int.Parse)
                             .ToList();
 
-            var baseUrl = "https://api.coinlore.net/api/ticker/?id=";
-            var apiUrl = $"{baseUrl}{string.Join(',', tickersIds)}";
+            var baseUrl = this._configuration.GetValue<string>("BaseUrl");
+            var refreshEndpoint = this._configuration.GetValue<string>("RefreshEndpoint");
+            var apiUrl = $"{baseUrl}{refreshEndpoint}{string.Join(',', tickersIds)}";
             return apiUrl;
         }
 
         private async ValueTask<IEnumerable<TickerDetails>> FetchTickersData(int startFrom, int limit)
         {
-            var baseUrl = "https://api.coinlore.net/api/tickers/?start=";
-            var apiUrl = $"{baseUrl}{startFrom}&limit={limit}";
+            var apiUrl = BuildGetUrl(startFrom, limit);
+
             var response = await _httpClient.GetAsync(apiUrl);
             if (response.IsSuccessStatusCode)
             {
@@ -85,6 +89,14 @@ namespace Crypto.Services
                 _logger.LogError(errorMessage);
                 throw new Exception(errorMessage);
             }
+        }
+
+        private string BuildGetUrl(int startFrom, int limit)
+        {
+            var baseUrl = this._configuration.GetValue<string>("BaseUrl");
+            var getEndpoint = this._configuration.GetValue<string>("GetEndpoint");
+            var apiUrl = $"{baseUrl}{getEndpoint}{startFrom}&limit={limit}";
+            return apiUrl;
         }
     }
 }
