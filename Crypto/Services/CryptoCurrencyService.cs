@@ -36,7 +36,9 @@ namespace Crypto.Services
 
                     return new CurrentTickerPriceDTO()
                     {
-                        CurrentTickerStatus = currentTickersPrice?.ToDictionary(ctp => ctp.Id, ctp => ctp.CurrentCoinPrice)
+                        CurrentTickerStatus = currentTickersPrice
+                        .Where(ctp=>ctp!=null && !string.IsNullOrEmpty(ctp.Id))
+                        .ToDictionary(ctp => ctp.Id, ctp => ctp.CurrentCoinPrice)
                     };
                 }
                 else

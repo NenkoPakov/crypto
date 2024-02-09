@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { FileUpload } from './Components/FileUpload';
-import axios from "axios";
 import { Table } from './Components/Table';
 import { StatisticsBar } from './Components/StatisticsBar';
 import { RefreshButton } from './Components/RefreshButton';
-import {API_URL, REFRESH_ENDPOINT, REFRESH_INTERVAL_IN_MINUTES} from './config';
+import {API_URL, REFRESH_ENDPOINT, REFRESH_INTERVAL_IN_MINUTES } from './config';
+import axios from "axios";
 
 function App() {
   const [assets, setAssets] = useState({});
@@ -12,25 +12,26 @@ function App() {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [sort, setSort] = useState({});
   const [intervalValueInMinutes, setIntervalValueInMinutes] = useState(REFRESH_INTERVAL_IN_MINUTES);
+  const [sortedIds, setSortedIds] = useState([]);
 
-  useEffect(() => {
-    if (currentBalance > 0) {
-      setTimeout(handleRefresh, intervalValueInMinutes * 60 * 1000);
-    }
-  }, [currentBalance])
+  // useEffect(() => {
+  //   if (currentBalance > 0) {
+  //     setTimeout(handleRefresh, intervalValueInMinutes * 60 * 1000);
+  //   }
+  // }, [currentBalance])
 
   useEffect(() => {
     if (!assets) {
       return;
     }
 
-    let sortedData = Object.values(assets).slice().sort((a, b) => {
+    let sortedKeys = Object.keys(assets).slice().sort((a, b) => {
       const columnA = sort.dataType === 'string'
-        ? a[sort.column].toString().toUpperCase() || ''
-        : a[sort.column];
+        ? assets[a][sort.column].toString().toUpperCase() || ''
+        : assets[a][sort.column];
       const columnB = sort.dataType === 'string'
-        ? b[sort.column].toString().toUpperCase() || ''
-        : b[sort.column];
+        ? assets[b][sort.column].toString().toUpperCase() || ''
+        : assets[b][sort.column];
 
       if (columnA < columnB) {
         return sort.order === 'asc' ? -1 : 1;
@@ -43,17 +44,33 @@ function App() {
       return 0;
     });
 
-    setAssets(sortedData);
+    setSortedIds(sortedKeys);
   }, [sort])
+
+  useEffect(() => {
+    var currentTotalBalance = Object.values(assets).reduce((accumulator, currentAsset) => accumulator + currentAsset.currentCoinPrice * currentAsset.amount, 0);
+    setCurrentBalance(() => currentTotalBalance);
+    setSortedIds(Object.keys(assets));
+  }, [assets])
+
+  useEffect(()=>{
+    const interval = setInterval(() => {
+      handleRefresh();
+      console.log("handleRefresh");
+    }, intervalValueInMinutes * 60 * 1000);
+
+    return () => clearInterval(interval);
+  },[intervalValueInMinutes])
 
   const handleRefresh = async () => {
     try {
-      const res = await axios.get(`${API_URL}${REFRESH_ENDPOINT}${Object.keys(assets)}`, {
+      const res = await axios.get(`${API_URL}${REFRESH_ENDPOINT}${sortedIds}`, {
         headers: {
           'Accept': 'application/json',
         },
       });
 
+      console.log("Refreshing");
       let data = res.data.currentTickerStatus;
       // let data = {
       //     "80":125,
@@ -77,18 +94,13 @@ function App() {
         
         return updatedAssets;
       });
-      
     } catch (ex) {
+      console.log("ERR");
       console.log(ex);
     } finally {
-      setTimeout(handleRefresh, intervalValueInMinutes * 60 * 1000);
+      // setTimeout(handleRefresh, intervalValueInMinutes * 60 * 1000);
     }
   };
-
-  useEffect(()=>{
-    var currentTotalBalance = Object.values(assets).reduce((accumulator, currentAsset) => accumulator + currentAsset.currentCoinPrice*currentAsset.amount, 0);
-    setCurrentBalance(() => currentTotalBalance)
-  },[assets])
 
   return (
     <div style={{ position: 'fixed', width: '80vw', height: '90vh' }} className="App">
@@ -109,6 +121,7 @@ function App() {
           />
           <Table
             assets={assets}
+            sortedIds={sortedIds}
             sort={sort}
             handleSorting={setSort} />
         </>
